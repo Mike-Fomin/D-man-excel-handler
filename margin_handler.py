@@ -1,11 +1,12 @@
 import re
+from pprint import pprint
+
 import openpyxl
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
-from pprint import pprint
 
 
-def margin_handler(path_to_file: str):
+def margin_handler(path_to_file: str, corrections: dict):
     """ Функция считывает файл Маржа.xlsx и получает из него данные"""
     wb: Workbook = openpyxl.load_workbook(filename=path_to_file, read_only=True)
     ws: Worksheet = wb.active
@@ -54,7 +55,7 @@ def margin_handler(path_to_file: str):
                 case 'цех слойки':
                     for data_key, value in layer_data.items():
                         value['FC'] = -row_data[value['FC']]
-                        value['Выпуск'] = row_data[value['Выпуск']]
+                        value['Выпуск'] = row_data[value['Выпуск']] - corrections.get(data_key, 0)
 
     return {
         'пекарский цех': baker_data,
@@ -65,4 +66,9 @@ def margin_handler(path_to_file: str):
 
 
 if __name__ == '__main__':
-    print(margin_handler('Маржа.xlsx'))
+
+    from parameters.load_parameters import load_params
+
+    _, _ , _, corrects = load_params('parameters/Параметры.xlsx')
+
+    pprint(margin_handler(path_to_file='Маржа.xlsx', corrections=corrects), sort_dicts=False)

@@ -116,7 +116,7 @@ def convert_table_to_value(table: list[list], save_table_to_file=False) -> tuple
 if __name__ == '__main__':
     from parameters.load_parameters import load_params
 
-    divisions, del_items, rules = load_params('parameters/Параметры.xlsx')
+    divisions, del_items, rules, corrections = load_params('parameters/Параметры.xlsx')
 
     handled_table: list[list] = set_bu_values(
         source_file='Исходник.xlsx',

@@ -2,7 +2,7 @@ import string
 import openpyxl
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
-from openpyxl.styles import PatternFill, Font, Alignment
+from openpyxl.styles import PatternFill, Font, Alignment, numbers
 
 
 def new_table_by_algorythm(path_to_params: str, headers: list[str], table: list[dict]):
@@ -51,7 +51,6 @@ def new_table_by_algorythm(path_to_params: str, headers: list[str], table: list[
             # Определяем соответствующую БЮ строку таблицы
             for table_row in table:
                 if table_row['БЮ'].lower() == bu_value:
-                    # print(table_row)
                     break
 
             baker_data[month_key][data[2]] = \
@@ -86,7 +85,7 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
     ws.column_dimensions['A'].width = 18
     ws.column_dimensions['B'].width = 26
     for letter in string.ascii_uppercase[2:]:
-        ws.column_dimensions[letter].width = 10.5
+        ws.column_dimensions[letter].width = 11.5
 
 
     margin_titles: list[str] = [
@@ -126,6 +125,7 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
                     ws.cell(row=row, column=col).value = temp_num1
                     ws.cell(row=row, column=2).font = table_font
                     ws.cell(row=row, column=col).font = table_font
+                    ws.cell(row=row, column=col).number_format = '# ### ###'
                     margin += temp_num1
                 elif title.startswith('FC'):
                     temp_num2: int | float = margin_tables[prod_key][month]['FC']
@@ -133,14 +133,16 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
                     ws.cell(row=row, column=col).value = temp_num2
                     ws.cell(row=row, column=2).font = table_font
                     ws.cell(row=row, column=col).font = table_font
+                    ws.cell(row=row, column=col).number_format = '# ### ###'
                     margin += temp_num2
                 elif title.startswith('Маржа'):
                     ws.cell(row=row, column=2).value = 'Маржа'
                     ws.cell(row=row, column=col).value = margin
                     ws.cell(row=row, column=2).font = table_font
                     ws.cell(row=row, column=col).font = table_font
-                    ws.cell(row=row, column=2).fill = PatternFill(fill_type='solid', fgColor='A8E4A0')
-                    ws.cell(row=row, column=col).fill = PatternFill(fill_type='solid', fgColor='A8E4A0')
+                    ws.cell(row=row, column=2).fill = PatternFill(fill_type='solid', fgColor='c2f1c8')
+                    ws.cell(row=row, column=col).fill = PatternFill(fill_type='solid', fgColor='c2f1c8')
+                    ws.cell(row=row, column=col).number_format = '# ### ###'
 
             # Записываем строки с основными расходами
             total_amount: float = 0.0
@@ -149,16 +151,25 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
                     ws.cell(row=row, column=2).value = title
                     ws.cell(row=row, column=col).value = total_amount
                     ws.cell(row=row, column=2).font = table_font
-                    ws.cell(row=row, column=col).font = table_font
-                    ws.cell(row=row, column=2).fill = PatternFill(fill_type='solid', fgColor='DDA0DD')
-                    ws.cell(row=row, column=col).fill = PatternFill(fill_type='solid', fgColor='DDA0DD')
+                    ws.cell(row=row, column=col).font = table_font_bold
+                    ws.cell(row=row, column=2).fill = PatternFill(fill_type='solid', fgColor='f2cfee')
+                    ws.cell(row=row, column=col).fill = PatternFill(fill_type='solid', fgColor='f2cfee')
+                    ws.cell(row=row, column=col).number_format = '# ### ###'
                 else:
                     ws.cell(row=row, column=2).value = title
                     ws.cell(row=row, column=col).value = inner_value[title]
                     ws.cell(row=row, column=2).font = table_font
                     ws.cell(row=row, column=col).font = table_font
+                    ws.cell(row=row, column=col).number_format = '# ### ###'
                     total_amount += inner_value[title]
 
+            ws.cell(row=outer_row + 12, column=2).value = 'Прибыль цеха'
+            ws.cell(row=outer_row + 12, column=col).value = total_amount + margin
+            ws.cell(row=outer_row + 12, column=2).font = table_font_bold
+            ws.cell(row=outer_row + 12, column=col).font = table_font_bold
+            ws.cell(row=outer_row + 12, column=2).fill = PatternFill(fill_type='solid', fgColor='d9f2d0')
+            ws.cell(row=outer_row + 12, column=col).fill = PatternFill(fill_type='solid', fgColor='d9f2d0')
+            ws.cell(row=outer_row + 12, column=col).number_format = '# ### ###'
 
             col += 1
         outer_row += 15
@@ -171,7 +182,7 @@ if __name__ == '__main__':
     from table_handler import set_bu_values, convert_table_to_value
     from margin_handler import margin_handler
 
-    divisions, del_items, rules = load_params('parameters/Параметры.xlsx')
+    divisions, del_items, rules, corrections = load_params('parameters/Параметры.xlsx')
 
     handled_table: list[list] = set_bu_values(
         source_file='Данные для производства 01.25.xlsx',
@@ -182,10 +193,9 @@ if __name__ == '__main__':
     )
 
     table_headers, table_data = convert_table_to_value(handled_table, save_table_to_file=False)
-    # print(headers, *table, sep='\n')
 
     result_dict = new_table_by_algorythm(path_to_params='parameters/Параметры.xlsx', headers=table_headers, table=table_data)
 
-    margin_dict = margin_handler('Маржа.xlsx')
+    margin_dict = margin_handler(path_to_file='Маржа.xlsx', corrections=corrections)
 
     save_data_to_table(result_dict, margin_dict)

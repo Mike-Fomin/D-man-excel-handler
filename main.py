@@ -2,13 +2,13 @@ import openpyxl
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
-from load_parameters import load_params
+from parameters.load_parameters import load_params
 from table_handler import set_bu_values, convert_table_to_value
 
 
 def main() -> None:
     # Считываем необходимые параметры в переменные из файла параметров
-    divisions, del_items, rules = load_params('Параметры.xlsx')
+    divisions, del_items, rules, corrections = load_params('Параметры.xlsx')
 
     # Получаем таблицу с проставленными БЮ
     handled_table: list[list] = set_bu_values(
