@@ -1,5 +1,6 @@
 import string
 import openpyxl
+from datetime import datetime as dt
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import PatternFill, Font, Alignment, numbers
@@ -89,17 +90,44 @@ def new_table_by_algorythm(path_to_params: str, headers: list[str], table: list[
     return result
 
 
-def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> None:
+def set_percents(ws: Worksheet, row: int, column: int, number: int|float, value: float| int, bold=False) -> None:
+    table_fond_italic: Font = Font(name='Arial', size=10, italic=True, color='808080')
+    table_font_italic_bold: Font = Font(name='Arial', size=10, bold=True, italic=True, color='808080')
+    ws.cell(row=row, column=column).value = value / number
+    if bold:
+        ws.cell(row=row, column=column).font = table_font_italic_bold
+    else:
+        ws.cell(row=row, column=column).font = table_fond_italic
+    ws.cell(row=row, column=column).number_format = '0.0%'
+
+
+def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict], *, extended_version: bool) -> None:
     """ Save to xslx-file """
     wb: Workbook = Workbook()
     ws: Worksheet = wb.active
 
     table_font: Font = Font(name='Arial', size=10)
     table_font_bold: Font = Font(name='Arial', size=10, bold=True)
+
     ws.column_dimensions['A'].width = 18
     ws.column_dimensions['B'].width = 26
-    for letter in string.ascii_uppercase[2:]:
-        ws.column_dimensions[letter].width = 11.5
+    for num, letter in enumerate(string.ascii_uppercase[2:], 2):
+        if extended_version:
+            if num % 2:
+                ws.column_dimensions[letter].width = 8
+            else:
+                ws.column_dimensions[letter].width = 11.5
+        else:
+            ws.column_dimensions[letter].width = 11.5
+
+    for num, letter in enumerate(string.ascii_uppercase, 0):
+        if extended_version:
+            if num % 2:
+                ws.column_dimensions[f"A{letter}"].width = 8
+            else:
+                ws.column_dimensions[f"A{letter}"].width = 11.5
+        else:
+            ws.column_dimensions[f"A{letter}"].width = 11.5
 
 
     margin_titles: list[str] = [
@@ -130,11 +158,15 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
             ws.cell(row=outer_row - 1, column=col - 1).fill = PatternFill(fill_type='solid', fgColor='ffff00')
 
         for month, inner_value in value.items():
-            ws.cell(row=outer_row - 1, column=col).value = month
+
+            ws.cell(row=outer_row - 1, column=col).value = dt.strptime(month, '%d.%m.%y')
             ws.cell(row=outer_row - 1, column=col).font = table_font_bold
             ws.cell(row=outer_row - 1, column=col).alignment = Alignment(horizontal='center')
+            ws.cell(row=outer_row - 1, column=col).number_format = 'MMM.YY'
             if prod_key == 'итого':
                 ws.cell(row=outer_row - 1, column=col).fill = PatternFill(fill_type='solid', fgColor='ffff00')
+                if extended_version:
+                    ws.cell(row=outer_row - 1, column=col + 1).fill = PatternFill(fill_type='solid', fgColor='ffff00')
 
             # Записываем строки с маржой
             margin: int = 0
@@ -147,6 +179,9 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
                     ws.cell(row=row, column=col).font = table_font
                     ws.cell(row=row, column=col).number_format = '# ### ###'
                     margin += temp_num1
+                    if extended_version:
+                        set_percents(ws, row, col + 1, temp_num1, temp_num1)
+
                 elif title.startswith('FC'):
                     temp_num2: int | float = margin_tables[prod_key][month]['FC']
                     ws.cell(row=row, column=2).value = 'FC выпущенной продукции'
@@ -155,6 +190,8 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
                     ws.cell(row=row, column=col).font = table_font
                     ws.cell(row=row, column=col).number_format = '# ### ###'
                     margin += temp_num2
+                    if extended_version:
+                        set_percents(ws, row, col + 1, temp_num1, temp_num2)
                 elif title.startswith('Маржа'):
                     ws.cell(row=row, column=2).value = 'Маржа'
                     ws.cell(row=row, column=col).value = margin
@@ -163,6 +200,11 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
                     ws.cell(row=row, column=2).fill = PatternFill(fill_type='solid', fgColor='c2f1c8')
                     ws.cell(row=row, column=col).fill = PatternFill(fill_type='solid', fgColor='c2f1c8')
                     ws.cell(row=row, column=col).number_format = '# ### ###'
+                    if extended_version:
+                        set_percents(ws, row, col + 1, temp_num1, margin)
+                        ws.cell(row=row, column=col + 1).fill = PatternFill(fill_type='solid', fgColor='c2f1c8')
+
+            set_percents(ws, outer_row + 3, col, temp_num1, temp_num2)
 
             # Записываем строки с основными расходами
             total_amount: float = 0.0
@@ -175,6 +217,9 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
                     ws.cell(row=row, column=2).fill = PatternFill(fill_type='solid', fgColor='f2cfee')
                     ws.cell(row=row, column=col).fill = PatternFill(fill_type='solid', fgColor='f2cfee')
                     ws.cell(row=row, column=col).number_format = '# ### ###'
+                    if extended_version:
+                        set_percents(ws, row, col + 1, temp_num1, total_amount, bold=True)
+                        ws.cell(row=row, column=col + 1).fill = PatternFill(fill_type='solid', fgColor='f2cfee')
                 else:
                     ws.cell(row=row, column=2).value = title
                     ws.cell(row=row, column=col).value = inner_value[title]
@@ -182,6 +227,8 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
                     ws.cell(row=row, column=col).font = table_font
                     ws.cell(row=row, column=col).number_format = '# ### ###'
                     total_amount += inner_value[title]
+                    if extended_version:
+                        set_percents(ws, row, col + 1, temp_num1, inner_value[title])
 
             ws.cell(row=outer_row + 12, column=2).value = 'Прибыль цеха'
             ws.cell(row=outer_row + 12, column=col).value = total_amount + margin
@@ -190,11 +237,19 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
             ws.cell(row=outer_row + 12, column=2).fill = PatternFill(fill_type='solid', fgColor='d9f2d0')
             ws.cell(row=outer_row + 12, column=col).fill = PatternFill(fill_type='solid', fgColor='d9f2d0')
             ws.cell(row=outer_row + 12, column=col).number_format = '# ### ###'
+            if extended_version:
+                set_percents(ws, outer_row + 12, col + 1, temp_num1, total_amount + margin, bold=True)
+                ws.cell(row=outer_row + 12, column=col + 1).fill = PatternFill(fill_type='solid', fgColor='d9f2d0')
+                col += 2
+            else:
+                col += 1
 
-            col += 1
         outer_row += 16
 
-    wb.save('results/Предварительный вариант.xlsx')
+    if extended_version:
+        wb.save('results/Предварительный расширенный вариант.xlsx')
+    else:
+        wb.save('results/Предварительный вариант.xlsx')
 
 
 if __name__ == '__main__':
@@ -218,4 +273,4 @@ if __name__ == '__main__':
 
     margin_dict = margin_handler(path_to_file='Маржа.xlsx', corrections=corrections)
 
-    save_data_to_table(result_dict, margin_dict)
+    save_data_to_table(result_dict, margin_dict, extended_version=True)
