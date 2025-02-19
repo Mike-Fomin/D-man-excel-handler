@@ -1,6 +1,4 @@
 import re
-from pprint import pprint
-
 import openpyxl
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
@@ -16,6 +14,7 @@ def margin_handler(path_to_file: str, corrections: dict):
     confectioner_data: dict = {}
     layer_data: dict = {}
     semi_prod_data: dict = {}
+    total_guilds: dict = {}
 
     break_flag: bool = False
     for curr_row, row_data in enumerate(ws.iter_rows(min_row=3, values_only=True), 3):
@@ -31,6 +30,7 @@ def margin_handler(path_to_file: str, corrections: dict):
                     confectioner_data[month_key]: dict = {'FC': col + 2, 'Выпуск': col + 3}
                     layer_data[month_key]: dict = {'FC': col + 2, 'Выпуск': col + 3}
                     semi_prod_data[month_key]: dict = {'FC': col + 2, 'Выпуск': col + 3}
+                    total_guilds[month_key]: dict = {'FC': 0, 'Выпуск': 0}
                 elif cell_data.lower().startswith(('горячий', 'кондитерский', 'пекарский', 'цех слойки')):
                     break_flag: bool = True
                     table_start_row: int = curr_row
@@ -57,11 +57,17 @@ def margin_handler(path_to_file: str, corrections: dict):
                         value['FC'] = -row_data[value['FC']]
                         value['Выпуск'] = row_data[value['Выпуск']] - corrections.get(data_key, 0)
 
+    for month_key in total_guilds:
+        for guild in [baker_data, confectioner_data, layer_data, semi_prod_data]:
+            total_guilds[month_key]['FC'] += guild[month_key]['FC']
+            total_guilds[month_key]['Выпуск'] += guild[month_key]['Выпуск']
+
     return {
         'пекарский цех': baker_data,
         'кондитерский цех': confectioner_data,
         'цех слойки': layer_data,
-        'цех пф': semi_prod_data
+        'цех пф': semi_prod_data,
+        'итого': total_guilds
     }
 
 
@@ -71,4 +77,4 @@ if __name__ == '__main__':
 
     _, _ , _, corrects = load_params('parameters/Параметры.xlsx')
 
-    pprint(margin_handler(path_to_file='Маржа.xlsx', corrections=corrects), sort_dicts=False)
+    print(margin_handler(path_to_file='Маржа.xlsx', corrections=corrects))

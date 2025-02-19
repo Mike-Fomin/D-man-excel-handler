@@ -30,6 +30,7 @@ def new_table_by_algorythm(path_to_params: str, headers: list[str], table: list[
     confectioner_data: dict = {}
     layer_data: dict = {}
     semi_prod_data: dict = {}
+    total_guilds_data: dict = {}
 
     for month_key in headers[1:]:
         # print(month_key)
@@ -37,6 +38,7 @@ def new_table_by_algorythm(path_to_params: str, headers: list[str], table: list[
         confectioner_data[month_key]: dict = {}
         layer_data[month_key]: dict = {}
         semi_prod_data[month_key]: dict = {}
+        total_guilds_data[month_key]: dict = {}
         for data in ws.iter_rows(min_row=3, values_only=True):
             data = list(data)
             bu_value: str = data[0].lower()
@@ -65,11 +67,23 @@ def new_table_by_algorythm(path_to_params: str, headers: list[str], table: list[
             semi_prod_data[month_key][data[2]] = \
                 round(semi_prod_data[month_key].get(data[2], 0) + (data[1] * data[semi_prod_col] * table_row[month_key]), 2)
 
+            total_guilds_data[month_key][data[2]] = 0
+
+    for month in total_guilds_data:
+        for unit in total_guilds_data[month]:
+            total_guilds_data[month][unit] = round(sum([
+                baker_data[month][unit],
+                confectioner_data[month][unit],
+                layer_data[month][unit],
+                semi_prod_data[month][unit]
+            ]), 2)
+
     result: dict = {
         'пекарский цех': baker_data,
         'кондитерский цех': confectioner_data,
         'цех слойки': layer_data,
-        'цех пф': semi_prod_data
+        'цех пф': semi_prod_data,
+        'итого': total_guilds_data
     }
 
     return result
@@ -110,11 +124,17 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
         ws.cell(row=outer_row, column=1).value = prod_key.title() if prod_key != 'цех пф' else 'Цех ПФ'
         ws.cell(row=outer_row, column=1).font = table_font_bold
         ws.cell(row=outer_row, column=1).alignment = Alignment(horizontal='center')
+
         col: int = 3
+        if prod_key == 'итого':
+            ws.cell(row=outer_row - 1, column=col - 1).fill = PatternFill(fill_type='solid', fgColor='ffff00')
+
         for month, inner_value in value.items():
             ws.cell(row=outer_row - 1, column=col).value = month
             ws.cell(row=outer_row - 1, column=col).font = table_font_bold
             ws.cell(row=outer_row - 1, column=col).alignment = Alignment(horizontal='center')
+            if prod_key == 'итого':
+                ws.cell(row=outer_row - 1, column=col).fill = PatternFill(fill_type='solid', fgColor='ffff00')
 
             # Записываем строки с маржой
             margin: int = 0
@@ -172,7 +192,7 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict]) -> 
             ws.cell(row=outer_row + 12, column=col).number_format = '# ### ###'
 
             col += 1
-        outer_row += 15
+        outer_row += 16
 
     wb.save('results/Предварительный вариант.xlsx')
 
