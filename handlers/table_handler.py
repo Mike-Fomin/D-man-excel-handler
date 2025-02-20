@@ -1,4 +1,6 @@
 import openpyxl
+import string
+
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -8,12 +10,14 @@ def set_bu_values(
         subdivisions: list[str],
         delete_items: list[str],
         handle_rules: list[dict],
-        save_to_temp_file=False
+        save_to_temp_file=True
 ) -> list[list]:
-    """ Function handles source table with "БЮ" values """
+    """ Функция заполняет столбец "БЮ" в исходной таблице и сохраняет изменения """
+
     # Читаем файл-исходник
     wb: Workbook = openpyxl.load_workbook(filename=source_file, data_only=True)
     ws: Worksheet = wb.active
+    ws.title = 'БЮ'
 
     # Получаем переменные: номера строки начала таблицы, столбца "Подразделение2", столбца "Статья2" и столбца "БЮ"
     # также получаем заголовки таблицы в отдельную переменную
@@ -60,16 +64,16 @@ def set_bu_values(
         for new_row, table_row in enumerate(new_table, title_row + 1):
             for new_col, table_item in enumerate(table_row, 1):
                 ws.cell(row=new_row, column=new_col).value = table_item
-        wb.save('results/Таблица БЮ.xlsx')
+        wb.save('results/Результат.xlsx')
 
     # Добавляем заголовки в таблицу
     new_table.insert(0, table_headers)
     # Возврат новой таблицы с удалением всех ненужных столбцов, включая столбец "сумма"
-    return list(map(lambda x: [x[bu_col]] + x[bu_col + 2:], new_table))
+    return wb, list(map(lambda x: [x[bu_col]] + x[bu_col + 2:], new_table))
 
 
-def convert_table_to_value(table: list[list], save_table_to_file=False) -> tuple[list[str],list[dict]]:
-    """ Function converts table to dict """
+def convert_table_to_value(wb: Workbook, table: list[list], save_table_to_file=True) -> tuple[list[str],list[dict]]:
+    """ Функция конвертирует значения таблицы в словарь """
     table_of_dicts: list = []
     headers, table_data = table[0], [list(map(lambda x: 0 if x is None else x, row)) for row in table[1:]]
 
@@ -91,8 +95,11 @@ def convert_table_to_value(table: list[list], save_table_to_file=False) -> tuple
 
     # запись временной таблицы в файл
     if save_table_to_file:
-        new_wb: Workbook = Workbook()
-        new_ws: Worksheet = new_wb.active
+        new_ws: Worksheet = wb.create_sheet('Переходник')
+        wb.active = 1
+        new_ws.column_dimensions['A'].width = 35
+        for letter in string.ascii_uppercase[1:]:
+            new_ws.column_dimensions[letter].width = 12
 
         for col, header in enumerate(headers, 1):
             new_ws.cell(row=1, column=col).value = header
@@ -103,27 +110,15 @@ def convert_table_to_value(table: list[list], save_table_to_file=False) -> tuple
                 else:
                     new_ws.cell(row=row, column=col).value = f"{cell_data:.2f}".replace('.', ',') if cell_data else None
 
-        new_wb.save('results/Переходной вариант таблицы.xlsx')
+        wb.save('results/Результат.xlsx')
 
     # собираем новую переменную из временной таблицы
     for table_line in temp_table:
         line_dict: dict = {key: value for key, value in zip(headers, table_line)}
         table_of_dicts.append(line_dict)
 
-    return headers, table_of_dicts
+    return wb, headers, table_of_dicts
 
 
 if __name__ == '__main__':
-    from parameters.load_parameters import load_params
-
-    divisions, del_items, rules, corrections = load_params('parameters/Параметры.xlsx')
-
-    handled_table: list[list] = set_bu_values(
-        source_file='Исходник.xlsx',
-        subdivisions=divisions,
-        delete_items=del_items,
-        handle_rules=rules,
-        save_to_temp_file=False
-    )
-
-    convert_table_to_value(handled_table, save_table_to_file=False)
+    pass

@@ -1,13 +1,14 @@
 import string
 import openpyxl
 from datetime import datetime as dt
+
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import PatternFill, Font, Alignment, numbers
 
 
 def new_table_by_algorythm(path_to_params: str, headers: list[str], table: list[dict]):
-    """ Function reads algorythm and makes new table """
+    """ Функция создает новую таблицу согласно алгоритму в параметрах """
     wb: Workbook = openpyxl.load_workbook(filename=path_to_params, data_only=True)
     for ws in wb.worksheets:
         ws: Worksheet
@@ -91,6 +92,7 @@ def new_table_by_algorythm(path_to_params: str, headers: list[str], table: list[
 
 
 def set_percents(ws: Worksheet, row: int, column: int, number: int|float, value: float| int, bold=False) -> None:
+    """ Set cell value and styles"""
     table_fond_italic: Font = Font(name='Arial', size=10, italic=True, color='808080')
     table_font_italic_bold: Font = Font(name='Arial', size=10, bold=True, italic=True, color='808080')
     ws.cell(row=row, column=column).value = value / number
@@ -101,33 +103,44 @@ def set_percents(ws: Worksheet, row: int, column: int, number: int|float, value:
     ws.cell(row=row, column=column).number_format = '0.0%'
 
 
-def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict], *, extended_version: bool) -> None:
-    """ Save to xslx-file """
-    wb: Workbook = Workbook()
-    ws: Worksheet = wb.active
+def save_data_to_table(
+        wb: Workbook,
+        source_tables: dict[dict],
+        margin_tables: dict[dict],
+        *,
+        extended_version: bool
+) -> None:
+    """ Функция сохраняет новую таблицу в файл """
+
+    if extended_version:
+        ws: Worksheet = wb.create_sheet('Расширенная')
+        wb.active = len(wb.worksheets) - 1
+    else:
+        ws: Worksheet = wb.create_sheet('Первая')
+        wb.active = len(wb.worksheets) - 1
 
     table_font: Font = Font(name='Arial', size=10)
     table_font_bold: Font = Font(name='Arial', size=10, bold=True)
 
-    ws.column_dimensions['A'].width = 18
-    ws.column_dimensions['B'].width = 26
+    ws.column_dimensions['A'].width = 23
+    ws.column_dimensions['B'].width = 32.5
     for num, letter in enumerate(string.ascii_uppercase[2:], 2):
         if extended_version:
             if num % 2:
-                ws.column_dimensions[letter].width = 8
+                ws.column_dimensions[letter].width = 9
             else:
-                ws.column_dimensions[letter].width = 11.5
+                ws.column_dimensions[letter].width = 14
         else:
-            ws.column_dimensions[letter].width = 11.5
+            ws.column_dimensions[letter].width = 14
 
     for num, letter in enumerate(string.ascii_uppercase, 0):
         if extended_version:
             if num % 2:
-                ws.column_dimensions[f"A{letter}"].width = 8
+                ws.column_dimensions[f"A{letter}"].width = 9
             else:
-                ws.column_dimensions[f"A{letter}"].width = 11.5
+                ws.column_dimensions[f"A{letter}"].width = 14
         else:
-            ws.column_dimensions[f"A{letter}"].width = 11.5
+            ws.column_dimensions[f"A{letter}"].width = 14
 
 
     margin_titles: list[str] = [
@@ -247,30 +260,10 @@ def save_data_to_table(source_tables: dict[dict], margin_tables: dict[dict], *, 
         outer_row += 16
 
     if extended_version:
-        wb.save('results/Предварительный расширенный вариант.xlsx')
+        wb.save('results/Результат.xlsx')
     else:
-        wb.save('results/Предварительный вариант.xlsx')
+        wb.save('results/Результат.xlsx')
 
 
 if __name__ == '__main__':
-    from parameters.load_parameters import load_params
-    from table_handler import set_bu_values, convert_table_to_value
-    from margin_handler import margin_handler
-
-    divisions, del_items, rules, corrections = load_params('parameters/Параметры.xlsx')
-
-    handled_table: list[list] = set_bu_values(
-        source_file='Данные для производства 01.25.xlsx',
-        subdivisions=divisions,
-        delete_items=del_items,
-        handle_rules=rules,
-        save_to_temp_file=False
-    )
-
-    table_headers, table_data = convert_table_to_value(handled_table, save_table_to_file=False)
-
-    result_dict = new_table_by_algorythm(path_to_params='parameters/Параметры.xlsx', headers=table_headers, table=table_data)
-
-    margin_dict = margin_handler(path_to_file='Маржа.xlsx', corrections=corrections)
-
-    save_data_to_table(result_dict, margin_dict, extended_version=True)
+    pass

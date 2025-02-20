@@ -1,10 +1,11 @@
 import openpyxl
+
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 
 def load_params(path_to_file: str) -> tuple[list[str], list[str], list[dict], dict]:
-    """ Function loads parameters from file to variables """
+    """ Функция считывает параметры из файла параметров и сохраняет их в переменные """
     wb: Workbook = openpyxl.load_workbook(filename=path_to_file, data_only=True)
     for ws in wb.worksheets:
         ws: Worksheet

@@ -1,7 +1,10 @@
-import re
 import openpyxl
+import re
+
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
+
+from parameters.load_parameters import load_params
 
 
 def margin_handler(path_to_file: str, corrections: dict):
@@ -72,9 +75,9 @@ def margin_handler(path_to_file: str, corrections: dict):
 
 
 if __name__ == '__main__':
-
+    from pprint import pprint
     from parameters.load_parameters import load_params
 
-    _, _ , _, corrects = load_params('parameters/Параметры.xlsx')
+    _, _ , _, corrects = load_params('../parameters/Параметры.xlsx')
 
-    print(margin_handler(path_to_file='Маржа.xlsx', corrections=corrects))
+    pprint(margin_handler(path_to_file='../Маржа.xlsx', corrections=corrects), sort_dicts=False)
